@@ -1,4 +1,5 @@
-import { Program } from './core/Program'
+import { Program } from './Program'
+import { webgl } from './WebGL'
 
 type Params = {
   width: number
@@ -6,8 +7,8 @@ type Params = {
 }
 
 export class Plane extends Program {
-  constructor(gl: WebGLRenderingContext, vs: string, fs: string, params: Params) {
-    super(gl, vs, fs, Plane.createIndexBufferAttributes(params))
+  constructor(vs: string, fs: string, params: Params) {
+    super(vs, fs, Plane.createIndexBufferAttributes(params))
   }
 
   private static createIndexBufferAttributes(params: Params) {
@@ -27,18 +28,18 @@ export class Plane extends Program {
       0, 0, 1,
     ]
     // prettier-ignore
-    // const uv = [
-    //   0, 0,
-    //   1, 0,
-    //   0, 1,
-    //   1, 1,
-    // ]
     const uv = [
-      0, 1,
-      1, 1,
       0, 0,
       1, 0,
+      0, 1,
+      1, 1,
     ]
+    // const uv = [
+    //   0, 1,
+    //   1, 1,
+    //   0, 0,
+    //   1, 0,
+    // ]
     // prettier-ignore
     const index = [
       0, 2, 1,
@@ -56,7 +57,7 @@ export class Plane extends Program {
   render() {
     super.render()
 
-    const gl = this.gl
-    this.gl.drawElements(gl.TRIANGLES, this.indexSize, gl.UNSIGNED_SHORT, 0)
+    const gl = webgl.gl
+    webgl.gl.drawElements(gl.TRIANGLES, this.indexSize, gl.UNSIGNED_SHORT, 0)
   }
 }

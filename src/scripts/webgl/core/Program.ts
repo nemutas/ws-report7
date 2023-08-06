@@ -1,3 +1,6 @@
+import { Texture } from './Texture'
+import { webgl } from './WebGL'
+
 type Attributes = {
   position: Float32Array
   normal: Float32Array
@@ -5,14 +8,17 @@ type Attributes = {
   index?: Uint16Array
 }
 
+type UniformType = '1f' | '2fv' | 'm4' | 't'
+
 export abstract class Program {
   private program: WebGLProgram
-  private uniforms: { [name in string]: { location: WebGLUniformLocation | null; setter?: (value: any) => void } } = {}
+  // private uniforms: { [name in string]: { location: WebGLUniformLocation | null; setter?: (value: any) => void } } = {}
+  private uniforms: { [name in string]: { location: WebGLUniformLocation | null; type: UniformType; texture?: Texture; unit?: number } } = {}
   private vbo: { [name in string]: { buffer: WebGLBuffer | null; location: number; size: number } } = {}
   private ibo?: WebGLBuffer | null
+  private textureUnit = 0
 
   constructor(
-    protected gl: WebGLRenderingContext,
     private vertexShader: string,
     private fragmentShader: string,
     private attributes: Attributes,
@@ -28,7 +34,7 @@ export abstract class Program {
    * シェーダオブジェクトを生成する
    */
   private createShaderObject(shaderSource: string, type: 'vertex' | 'fragment') {
-    const gl = this.gl
+    const gl = webgl.gl
     const _type = type === 'vertex' ? gl.VERTEX_SHADER : gl.FRAGMENT_SHADER
     const shader = gl.createShader(_type)
     if (!shader) throw new Error('cannot created shader')
@@ -44,7 +50,7 @@ export abstract class Program {
    * プログラムオブジェクトを生成する
    */
   private createProgramObject(vs: WebGLShader, fs: WebGLShader) {
-    const gl = this.gl
+    const gl = webgl.gl
     const program = gl.createProgram()
     if (!program) throw new Error('cannot created program')
 
@@ -79,7 +85,7 @@ export abstract class Program {
    * @param usage データの扱い方（attributeの更新頻度）
    */
   createVBO(name: string, datas: BufferSource, count: number, usage: 'STATIC_DRAW' | 'DYNAMIC_DRAW' | 'STREAM_DRAW' = 'STATIC_DRAW') {
-    const gl = this.gl
+    const gl = webgl.gl
     const vbo = gl.createBuffer()
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo)
     gl.bufferData(gl.ARRAY_BUFFER, datas, gl[usage])
@@ -92,7 +98,7 @@ export abstract class Program {
    * iboを作成する
    */
   createIBO(datas: Uint16Array) {
-    const gl = this.gl
+    const gl = webgl.gl
 
     const ibo = gl.createBuffer()
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo)
@@ -106,7 +112,7 @@ export abstract class Program {
    * bufferを有効化する
    */
   enableBuffer() {
-    const gl = this.gl
+    const gl = webgl.gl
 
     Object.values(this.vbo).forEach((vbo) => {
       if (0 <= vbo.location) {
@@ -125,7 +131,7 @@ export abstract class Program {
    * @param datas 更新データ
    */
   updateAttribute(name: string, datas: BufferSource) {
-    const gl = this.gl
+    const gl = webgl.gl
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo[name])
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, datas)
   }
@@ -143,23 +149,51 @@ export abstract class Program {
 
   /**
    * uniformを設定する
+   * @param name
+   * @param value データ型に対応した値
+   */
+  setUniform(name: string, value?: any) {
+    const gl = webgl.gl
+    const { location, type, texture, unit } = this.uniforms[name]
+
+    switch (type) {
+      case '1f':
+        value && gl.uniform1f(location, value)
+        break
+      case '2fv':
+        value && gl.uniform2fv(location, value)
+        break
+      case 'm4':
+        value && gl.uniformMatrix4fv(location, false, value)
+        break
+      case 't':
+        if (value && value instanceof Texture) {
+          this.uniforms[name].texture = value
+        }
+        gl.activeTexture(gl.TEXTURE0 + unit!)
+        gl.bindTexture(gl.TEXTURE_2D, texture!.texture)
+        gl.uniform1i(location, unit!)
+        break
+    }
+  }
+
+  /**
+   * uniformを追加する
    * @param name 一意な名前
    * @param type データ型
-   * @param defaultValue 初期値
+   * @param value 初期値
    */
-  setUniform(name: string, type: '1f' | '2fv' | 'm4', defaultValue?: any) {
-    const gl = this.gl
+  addUniform(name: string, type: UniformType, value?: any) {
+    const gl = webgl.gl
     const location = gl.getUniformLocation(this.program, name)
 
-    let setter: ((value: any) => void) | undefined
-    // prettier-ignore
-    if      (type === '1f')  setter = (value: any) => gl.uniform1f(location, value)
-    else if (type === '2fv') setter = (value: any) => gl.uniform2fv(location, value)
-    else if (type === 'm4')  setter = (value: any) => gl.uniformMatrix4fv(location, false, value)
-
-    this.uniforms[name] = { location, setter }
-
-    defaultValue && this.updateUniform(name, defaultValue)
+    if (type === 't' && value instanceof Texture) {
+      this.uniforms[name] = { location, type: 't', texture: value, unit: this.textureUnit++ }
+      this.setUniform(name)
+    } else if (type !== 't') {
+      this.uniforms[name] = { location, type }
+      this.setUniform(name, value)
+    }
   }
 
   /**
@@ -167,16 +201,7 @@ export abstract class Program {
    */
   getUniformValue(name: string): any | null {
     if (!this.uniforms[name]?.location) return null
-    return this.gl.getUniform(this.program, this.uniforms[name].location!)
-  }
-
-  /**
-   * uniformを更新する
-   */
-  updateUniform(name: string, value: any) {
-    if (this.uniforms[name]?.location) {
-      this.uniforms[name].setter?.(value)
-    }
+    return webgl.gl.getUniform(this.program, this.uniforms[name].location!)
   }
 
   /**
@@ -185,7 +210,7 @@ export abstract class Program {
   addUniformValue(name: string, value: number) {
     const origin = this.getUniformValue(name)
     if (typeof origin === 'number') {
-      this.updateUniform(name, origin + value)
+      this.setUniform(name, origin + value)
     }
   }
 
@@ -200,15 +225,15 @@ export abstract class Program {
   // dispose
 
   private deleteProgram() {
-    this.gl.deleteProgram(this.program)
+    webgl.gl.deleteProgram(this.program)
   }
 
   private deleteVBO() {
-    Object.values(this.vbo).forEach((vbo) => this.gl.deleteBuffer(vbo))
+    Object.values(this.vbo).forEach((vbo) => webgl.gl.deleteBuffer(vbo))
   }
 
   private deleteIBO() {
-    this.ibo && this.gl.deleteBuffer(this.ibo)
+    this.ibo && webgl.gl.deleteBuffer(this.ibo)
   }
 
   dispose() {

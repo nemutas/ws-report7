@@ -1,20 +1,32 @@
 import { HEX, RGBA, hexToRgb } from '../utils/color'
 import { clamp } from '../utils/math'
 
-export abstract class WebGL {
-  protected gl: WebGLRenderingContext
+class WebGL {
+  private _gl?: WebGLRenderingContext
+  private _canvas?: HTMLCanvasElement
   private backgroundColor: RGBA = [1, 1, 1, 1]
   private animeId?: number
 
-  constructor(private canvas: HTMLCanvasElement) {
-    this.gl = this.getContext()
+  setup(canvas: HTMLCanvasElement) {
+    this._canvas = canvas
+    this._gl = this.createContext()
     this.clearColor()
     this.clearDepth()
     this.addEvents()
     this.resize()
   }
 
-  private getContext() {
+  private get canvas() {
+    if (this._canvas) return this._canvas
+    else throw new Error('HTMLCanvasElement is not defined')
+  }
+
+  get gl() {
+    if (this._gl) return this._gl
+    else throw new Error('WebGLRenderingContext is not defined')
+  }
+
+  private createContext() {
     const gl = this.canvas.getContext('webgl')
     if (gl) {
       gl.enable(gl.DEPTH_TEST)
@@ -44,7 +56,7 @@ export abstract class WebGL {
     this.gl.clear(this.gl.COLOR_BUFFER_BIT)
   }
 
-  protected set background(color: RGBA | HEX) {
+  set background(color: RGBA | HEX) {
     if (typeof color === 'string') {
       const c = hexToRgb(color)
       if (c) {
@@ -58,7 +70,11 @@ export abstract class WebGL {
     this.clearColor()
   }
 
-  protected animation(anime: () => void) {
+  get size() {
+    return { width: this.canvas.width, height: this.canvas.height, aspect: this.canvas.width / this.canvas.height }
+  }
+
+  animation(anime: () => void) {
     this.animeId = requestAnimationFrame(this.animation.bind(this, anime))
 
     this.clearColor()
@@ -66,7 +82,7 @@ export abstract class WebGL {
     anime()
   }
 
-  protected cancelAnimation() {
+  cancelAnimation() {
     this.animeId && cancelAnimationFrame(this.animeId)
   }
 
@@ -75,3 +91,5 @@ export abstract class WebGL {
     this.cancelAnimation()
   }
 }
+
+export const webgl = new WebGL()
