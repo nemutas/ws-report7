@@ -7,16 +7,16 @@ import { webgl } from './core/WebGL'
 
 export class Canvas {
   private plane?: Plane
-  private texture?: Texture
+  private textures: Texture[] = []
 
   constructor(canvas: HTMLCanvasElement) {
     webgl.setup(canvas)
 
-    const paths = ['/images/unsplash.webp']
+    const paths = ['/images/unsplash1.webp', '/images/unsplash2.webp']
     loadImages(paths).then((images) => {
       webgl.background = '#012'
       this.addEvents()
-      this.createScreen(images[0])
+      this.createScreen(images)
       webgl.animation(this.render)
     })
   }
@@ -29,13 +29,17 @@ export class Canvas {
     this.plane?.setUniform('uAspect', webgl.size.aspect)
   }
 
-  private createScreen(image: HTMLImageElement) {
+  private createScreen(images: HTMLImageElement[]) {
     this.plane = new Plane(vs, fs, { width: 2, height: 2 })
 
-    this.texture = new Texture({ source: image })
-    this.plane.addUniform('uTexture', 't', this.texture)
+    // texture作成時にbindを解除している関係上、先にtextureを作ってからuniformに登録する。
+    this.textures = images.map((image) => new Texture({ source: image }))
+    this.textures.forEach((texture, i) => {
+      this.plane?.addUniform(`uTextures[${i}].data`, 't', texture)
+      this.plane?.addUniform(`uTextures[${i}].aspect`, '1f', texture.size.aspect)
+    })
+
     this.plane.addUniform('uAspect', '1f', webgl.size.aspect)
-    this.plane.addUniform('uImageAspect', '1f', this.texture.size.aspect)
   }
 
   private render = () => {
@@ -45,7 +49,7 @@ export class Canvas {
   dispose() {
     webgl.dispose()
     this.plane?.dispose()
-    this.texture?.dispose()
+    this.textures.forEach((t) => t.dispose())
     window.removeEventListener('resize', this.resize)
   }
 }
