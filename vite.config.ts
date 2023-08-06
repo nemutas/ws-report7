@@ -6,6 +6,7 @@ export default defineConfig(() => {
 	return {
 		root: './src',
 		publicDir: '../public',
+		base: '/ws-report7/',
 		plugins: [tsconfigPaths(), glsl()],
 		server: {
 			host: true,
