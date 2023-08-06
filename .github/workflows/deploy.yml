@@ -5,6 +5,7 @@ on:
   # デフォルトブランチを対象としたプッシュ時にで実行されます
   push:
     branches: ['main']
+    paths-ignore: ['**/README.md']
 
   # Actions タブから手動でワークフローを実行できるようにします
   workflow_dispatch:
