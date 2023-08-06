@@ -1,5 +1,5 @@
 export class Counter {
 	constructor() {
-		console.log('create counter instance')
+		console.log('create counter instance!')
 	}
 }
