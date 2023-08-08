@@ -29,17 +29,11 @@ export class Plane extends Program {
     ]
     // prettier-ignore
     const uv = [
-      0, 0,
-      1, 0,
       0, 1,
       1, 1,
+      0, 0,
+      1, 0,
     ]
-    // const uv = [
-    //   0, 1,
-    //   1, 1,
-    //   0, 0,
-    //   1, 0,
-    // ]
     // prettier-ignore
     const index = [
       0, 2, 1,

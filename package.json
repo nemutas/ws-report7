@@ -10,6 +10,7 @@
 		"preview": "vite preview"
 	},
 	"devDependencies": {
+		"@types/virtual-scroll": "^2.0.1",
 		"autoprefixer": "^10.4.14",
 		"prettier": "^3.0.1",
 		"ress": "^5.0.2",
@@ -18,5 +19,9 @@
 		"vite": "^4.4.5",
 		"vite-plugin-glsl": "^1.1.2",
 		"vite-tsconfig-paths": "^4.2.0"
+	},
+	"dependencies": {
+		"lil-gui": "^0.18.2",
+		"virtual-scroll": "^2.2.1"
 	}
 }

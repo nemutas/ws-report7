@@ -8,11 +8,10 @@ type Attributes = {
   index?: Uint16Array
 }
 
-type UniformType = '1f' | '2fv' | 'm4' | 't'
+type UniformType = '1f' | '1i' | '2fv' | 'm4' | 't'
 
 export abstract class Program {
   private program: WebGLProgram
-  // private uniforms: { [name in string]: { location: WebGLUniformLocation | null; setter?: (value: any) => void } } = {}
   private uniforms: { [name in string]: { location: WebGLUniformLocation | null; type: UniformType; texture?: Texture; unit?: number } } = {}
   private vbo: { [name in string]: { buffer: WebGLBuffer | null; location: number; size: number } } = {}
   private ibo?: WebGLBuffer | null
@@ -159,6 +158,9 @@ export abstract class Program {
     switch (type) {
       case '1f':
         value && gl.uniform1f(location, value)
+        break
+      case '1i':
+        value && gl.uniform1i(location, value)
         break
       case '2fv':
         value && gl.uniform2fv(location, value)

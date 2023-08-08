@@ -28,6 +28,7 @@ class WebGL {
 
   private createContext() {
     const gl = this.canvas.getContext('webgl')
+    // const gl = this.canvas.getContext('webgl2')
     if (gl) {
       gl.enable(gl.DEPTH_TEST)
       return gl
