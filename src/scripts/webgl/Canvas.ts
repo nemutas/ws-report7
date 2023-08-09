@@ -1,11 +1,12 @@
 import vs from './shader/vertexShader.glsl'
 import fs from './shader/fragmentShader.glsl'
 import { Plane } from './core/Plane'
-import { loadImages } from '@scripts/utils'
+import { isTouch, loadImages } from '@scripts/utils'
 import { Texture } from './core/Texture'
 import { webgl } from './core/WebGL'
 import { lerp } from './utils/math'
 import VirtualScroll from 'virtual-scroll'
+import { Events } from './Events'
 
 export class Canvas {
   private plane?: Plane
@@ -22,11 +23,9 @@ export class Canvas {
       curret: [0, 0],
     },
   }
-  private scroll = {
-    curret: 0,
-    target: 0,
-  }
+  private scroll = { curret: 0, target: 0 }
   private scroller?: VirtualScroll
+  private events?: Events
 
   constructor(canvas: HTMLCanvasElement) {
     webgl.setup(canvas)
@@ -41,43 +40,52 @@ export class Canvas {
   }
 
   private addEvents() {
-    window.addEventListener('resize', this.resize)
-    window.addEventListener('mousemove', this.handleMousemove)
-    window.addEventListener('mousedown', this.handleMousedown)
-    window.addEventListener('mouseup', this.handleMouseup)
+    const touchSpeed = 1.5
 
-    this.scroller = new VirtualScroll()
-    this.scroller.on((event) => {
-      this.scroll.target = event.y
-    })
+    const events = new Events()
+    events.resize = () => this.handleResize()
+    events.mousemove = (e: MouseEvent) => this.handleMove(e.clientX, e.clientY)
+    events.mousedown = (e: MouseEvent) => this.handleStart(e.clientX, e.clientY)
+    events.mouseup = () => this.handleEnd()
+    events.touchmove = (e: TouchEvent) => this.handleMove(e.touches[0].clientX * touchSpeed, e.touches[0].clientY * touchSpeed)
+    events.touchstart = (e: TouchEvent) => this.handleStart(e.touches[0].clientX * touchSpeed, e.touches[0].clientY * touchSpeed)
+    events.touchend = () => this.handleEnd()
+    this.events = events
+
+    if (!isTouch()) {
+      this.scroller = new VirtualScroll()
+      this.scroller.on((event) => {
+        this.scroll.target = event.y
+      })
+    }
   }
 
-  private resize = () => {
+  private handleResize() {
     this.plane?.setUniform('uAspect', webgl.size.aspect)
   }
 
-  private handleMousemove = (e: MouseEvent) => {
-    let x = e.clientX / webgl.size.width
-    let y = 1.0 - e.clientY / webgl.size.height
+  private handleMove(_x: number, _y: number) {
+    let x = _x / webgl.size.width
+    let y = 1.0 - _y / webgl.size.height
     x = x * 2.0 - 1.0
     y = y * 2.0 - 1.0
     this.mouse.move.target = [x, y]
 
     if (this.mouse.drag.isDrag) {
-      const dx = e.clientX - this.mouse.drag.prev[0]
-      const dy = e.clientY - this.mouse.drag.prev[1]
+      const dx = _x - this.mouse.drag.prev[0]
+      const dy = _y - this.mouse.drag.prev[1]
       this.mouse.drag.target[0] += dx
       this.mouse.drag.target[1] += dy
-      this.mouse.drag.prev = [e.clientX, e.clientY]
+      this.mouse.drag.prev = [_x, _y]
     }
   }
 
-  private handleMousedown = (e: MouseEvent) => {
+  private handleStart(_x: number, _y: number) {
     this.mouse.drag.isDrag = true
-    this.mouse.drag.prev = [e.clientX, e.clientY]
+    this.mouse.drag.prev = [_x, _y]
   }
 
-  private handleMouseup = () => {
+  private handleEnd() {
     this.mouse.drag.isDrag = false
   }
 
@@ -128,10 +136,7 @@ export class Canvas {
     webgl.dispose()
     this.plane?.dispose()
     this.textures.forEach((t) => t.dispose())
-    window.removeEventListener('resize', this.resize)
-    window.removeEventListener('mousemove', this.handleMousemove)
-    window.removeEventListener('mousedown', this.handleMousedown)
-    window.removeEventListener('mouseup', this.handleMouseup)
+    this.events?.remove()
     this.scroller?.destroy()
   }
 }

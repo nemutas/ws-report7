@@ -14,3 +14,5 @@ export function loadImage(path: string) {
 export async function loadImages(paths: string[]) {
   return await Promise.all(paths.map(async (path) => await loadImage(path)))
 }
+
+export const isTouch = () => !window.matchMedia('(hover: hover) and (pointer: fine)').matches

@@ -42,8 +42,8 @@ class WebGL {
   }
 
   private resize = () => {
-    this.canvas.width = window.innerWidth
-    this.canvas.height = window.innerHeight
+    this.canvas.width = window.innerWidth * window.devicePixelRatio
+    this.canvas.height = window.innerHeight * window.devicePixelRatio
     this.gl.viewport(0, 0, this.canvas.width, this.canvas.height)
   }
 
