@@ -154,6 +154,7 @@ export abstract class Program {
   setUniform(name: string, value?: any) {
     const gl = webgl.gl
     const { location, type, texture, unit } = this.uniforms[name]
+    if (!location) return
 
     switch (type) {
       case '1f':
@@ -231,7 +232,7 @@ export abstract class Program {
   }
 
   private deleteVBO() {
-    Object.values(this.vbo).forEach((vbo) => webgl.gl.deleteBuffer(vbo))
+    Object.values(this.vbo).forEach((vbo) => webgl.gl.deleteBuffer(vbo.buffer))
   }
 
   private deleteIBO() {
