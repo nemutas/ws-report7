@@ -64,25 +64,21 @@ export class Canvas {
     this.plane?.setUniform('uAspect', webgl.size.aspect)
   }
 
-  private handleMove(_x: number, _y: number) {
-    let x = _x / webgl.size.width
-    let y = 1.0 - _y / webgl.size.height
-    x = x * 2.0 - 1.0
-    y = y * 2.0 - 1.0
-    this.mouse.move.target = [x, y]
+  private handleMove(x: number, y: number) {
+    this.mouse.move.target = [(x / webgl.size.width) * 2 - 1, (1 - y / webgl.size.height) * 2 - 1]
 
     if (this.mouse.drag.isDrag) {
-      const dx = _x - this.mouse.drag.prev[0]
-      const dy = _y - this.mouse.drag.prev[1]
+      const dx = x - this.mouse.drag.prev[0]
+      const dy = y - this.mouse.drag.prev[1]
       this.mouse.drag.target[0] += dx
       this.mouse.drag.target[1] += dy
-      this.mouse.drag.prev = [_x, _y]
+      this.mouse.drag.prev = [x, y]
     }
   }
 
-  private handleStart(_x: number, _y: number) {
+  private handleStart(x: number, y: number) {
     this.mouse.drag.isDrag = true
-    this.mouse.drag.prev = [_x, _y]
+    this.mouse.drag.prev = [x, y]
   }
 
   private handleEnd() {
